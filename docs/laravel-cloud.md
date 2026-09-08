@@ -34,7 +34,7 @@ Cloud injects `NODE_ENV=production` and its configured `PORT`. The start script 
 1. Review push-to-deploy before connecting the production branch; Cloud enables automatic deployments by default.
 2. Click **Deploy** and wait for a successful build and startup.
 3. Open the assigned Cloud domain and verify that the island loads, project panels open, and mobile controls work.
-4. Request `https://<your-cloud-domain>/health`. Expect HTTP 200, `{"status":"ok"}`, and `Cache-Control: no-store`.
+4. Request `https://<your-cloud-domain>/health`. Expect HTTP 200, `{"status":"ok"}`, and `Cache-Control: no-store`. `/up` is also available for monitors configured with Laravel's conventional health path. Both endpoints support GET and HEAD without redirects; neither needs browser JavaScript.
 5. Add `idris.ng` under the environment's Domains settings. Add the exact DNS records Cloud displays at your DNS provider. Wait for DNS verification and the managed TLS certificate, then verify `https://idris.ng/`. Add `www.idris.ng` separately only if wanted.
 
 The browser keeps game progress locally. There is no server-side user data to migrate or persist across deploys. Google Fonts are fetched by the visitor's browser, with system-font fallbacks; the build does not require Google Fonts access.
@@ -48,13 +48,24 @@ npx playwright install chromium
 npm run test:production
 ```
 
-The production browser suite starts a fresh server on port `4173` and exercises the same interaction and mobile tests as the Vite suite. To try it manually:
+The production suite starts a fresh server on port `4173`, checks GET/HEAD health probes and missing-asset handling, and exercises the same interaction and mobile tests as the Vite suite. To try it manually:
 
 ```sh
 PORT=3000 npm start
 ```
 
 Open http://localhost:3000 and http://localhost:3000/health. `npm start` requires a successful `npm run build` first. To recover from a failed deployment, inspect the build/application logs and redeploy a known-good commit through Cloud; do not alter the production filesystem manually.
+
+## If Cloud reports crashing after Next.js is ready
+
+The `Ready` startup message confirms the server bound its port, not that Cloud's readiness check succeeded. A subsequent cluster shutdown with no application exception does not identify the cause by itself.
+
+- Confirm the Cloud app is configured as Next.js and its application port matches the port printed at startup (normally `3000`). Remove a manually overridden `PORT` if it disagrees with the application port setting.
+- Inspect access and proxy logs around startup for a failed probe's path and status. `/`, `/health`, and `/up` return 200; `/up` exists for compatibility, not because Cloud's public docs specify it as the Next.js probe path.
+- Check compute metrics and termination details for out-of-memory or exit-code evidence. A process killed by the container's memory limit may not print a JavaScript exception.
+- The npm `Unknown env config "python"` warning is non-fatal when Next.js starts afterward; changing the application's port or hiding that warning is not a demonstrated fix.
+
+If the container still terminates, collect the full application/proxy logs, configured port, compute memory size, and exit reason before changing the runtime or increasing resources.
 
 ## References
 

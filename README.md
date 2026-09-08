@@ -19,7 +19,7 @@ npm run build
 npm start
 ```
 
-The production host is Next.js, one of Laravel Cloud's supported JavaScript frameworks. It serves the existing React game without server-rendering its browser-only WebGL and storage code. `npm start` binds to `0.0.0.0` and respects the `PORT` environment variable (default `3000`). `/health` returns an uncached JSON health response. No PHP, database, cache, queue, or application secrets are required.
+The production host is Next.js, one of Laravel Cloud's supported JavaScript frameworks. It serves the existing React game without server-rendering its browser-only WebGL and storage code. `npm start` binds to `0.0.0.0` and respects the `PORT` environment variable (default `3000`). `/health` and the Laravel-compatible `/up` return uncached JSON health responses for GET and HEAD probes. No PHP, database, cache, queue, or application secrets are required.
 
 See [the Laravel Cloud deployment guide](docs/laravel-cloud.md) for dashboard settings, domain setup, and verification. Building locally does not deploy the site.
 
