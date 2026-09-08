@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowUpRight, Flame, Mic2, Radio, Youtube } from 'lucide-react';
 import { podcastUrl } from './content';
 import { playSound } from './sound';
+import RecordingBooth from './RecordingBooth';
 
 export default function PodcastRadio({ sound }: { sound: boolean }) {
   const [frequency, setFrequency] = useState(88);
@@ -26,5 +27,6 @@ export default function PodcastRadio({ sound }: { sound: boolean }) {
     <div className="podcast-host"><span className="host-icon"><Mic2 size={25}/></span><span><small>BEHIND THE MIC</small><strong>Idris Lawal</strong><p>Software developer. Curious human. Podcast host.</p></span></div>
     <a className="primary-button podcast-watch" href={podcastUrl} target="_blank" rel="noreferrer"><Youtube size={21}/> Watch BytesBurn on YouTube <ArrowUpRight size={18}/></a>
     <p className="podcast-note">The dial is a playful introduction. The real conversations live on YouTube.</p>
+    <RecordingBooth/>
   </>;
 }

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import '../src/styles.css';
 import '../src/features.css';
 import '../src/responsive.css';
+import '../src/adventures.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://idris.ng'),

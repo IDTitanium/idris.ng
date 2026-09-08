@@ -4,11 +4,14 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpRight, Check } from 'lucide-react';
 import { places, type PlaceId } from './content';
 import { playSound } from './sound';
+import { bugs, type BugId } from './experienceContent';
 
 type Props = {
   night: boolean; sound: boolean; paused: boolean; reducedMotion: boolean;
   onVisit: (id: PlaceId) => void; onCollect: (index: number) => void; collected: number[];
-  visited: PlaceId[]; command: { type: 'start' | 'jump' | 'reset'; nonce: number } | null;
+  visited: PlaceId[]; command: { type: 'start' | 'jump' | 'reset' | 'launch'; nonce: number } | null;
+  duck: boolean; onDuck: () => void; hunt: boolean; solved: BugId[]; onBug: (id: BugId) => void;
+  onCapture: (capture: (() => string) | null) => void;
 };
 
 export default function World(props: Props) {
@@ -223,6 +226,32 @@ export default function World(props: Props) {
     playerMarker.rotation.x = -Math.PI / 2; playerMarker.position.set(0.25, 0.24, 2.45); island.add(playerMarker);
     const targetMarker = new THREE.Mesh(new THREE.RingGeometry(0.14, 0.2, 32), new THREE.MeshBasicMaterial({ color: '#ed7444', side: THREE.DoubleSide, transparent: true, opacity: 0.8 }));
     targetMarker.rotation.x = -Math.PI / 2; targetMarker.visible = false; island.add(targetMarker);
+    // Quack follows the visitor, and can be tapped without adding more floating pins.
+    const duck = new THREE.Group(); duck.position.set(-.55, .24, 3); island.add(duck);
+    const duckBody = sphere(duck, .24, 0, .24, 0, '#f2c34e', 2); duckBody.scale.set(1, .8, 1.3);
+    sphere(duck, .18, 0, .46, .16, '#f7d368', 2);
+    box(duck, .22, .07, .16, 0, .42, .34, '#e77b42');
+    [-.12,.12].forEach(x=>sphere(duck,.023,x,.49,.28,'#303a32',1));
+    cylinder(duck,.16,.16,.05,0,.61,.16,'#72967b');
+    box(duck,.18,.035,.13,0,.6,.32,'#72967b');
+    const bugMeshes = bugs.map((bug, i) => {
+      const group = new THREE.Group(); group.position.set(bug.position[0], .35, bug.position[1]); group.userData.bugId=bug.id; island.add(group);
+      sphere(group,.2,0,.15,0,'#d96c53',1); sphere(group,.11,0,.17,.22,'#423e38',1);
+      for(let leg=0;leg<3;leg++)[-1,1].forEach(side=>{const foot=box(group,.24,.035,.035,side*.2,.08,(leg-1)*.13,'#423e38');foot.rotation.z=side*.2;});
+      [-.06,.06].forEach(x=>sphere(group,.02,x,.22,.31,'#fff1d2',1));
+      group.rotation.y = i; return group;
+    });
+    const launchPad = new THREE.Group(); launchPad.position.set(5.5,.23,4); island.add(launchPad);
+    cylinder(launchPad,.65,.73,.13,0,0,0,'#81917c');
+    const rocket = new THREE.Group(); launchPad.add(rocket);
+    cylinder(rocket,.2,.2,.72,0,.5,0,'#f8eedb');
+    cylinder(rocket,0,.2,.37,0,1.04,0,'#e7754c');
+    const rocketWindow = sphere(rocket,.10,0,.65,.18,'#73a9b3',2); rocketWindow.scale.z=.3;
+    [-1,1].forEach(side=>box(rocket,.16,.4,.22,side*.24,.3,0,'#e7754c'));
+    const flame = cylinder(rocket,.12,0,.55,0,-.03,0,'#f5bd4d'); flame.visible=false;
+    let launchTime: number | null = null;
+    let inspected: BugId | null = null;
+    callbacks.current.onCapture(() => { renderer.render(scene,camera); return renderer.domElement.toDataURL('image/png'); });
     const collectibles: THREE.Mesh[] = [];
     [[1.7,-3.15],[0.2,-1.6],[0.2,0.1],[-2.1,0.65],[-4.7,0.65],[2.3,0.65],[4.9,0.65],[0.2,3.75]].forEach(([x,z], index) => {
       const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.14), new THREE.MeshStandardMaterial({ color: '#edae39', metalness: 0.25, roughness: 0.35, emissive: '#b87514', emissiveIntensity: 0.15 }));
@@ -257,6 +286,7 @@ export default function World(props: Props) {
     const valid = (x: number, z: number) => Math.abs(x) < 6.5 && Math.abs(z) < 4.8 && !obstacles.some(o => Math.abs(x-o.x)<o.w+0.15 && Math.abs(z-o.z)<o.d+0.15);
     const jump = () => { if (jumpHeight <= 0.001) { jumpVelocity = 4.0; playSound('jump', callbacks.current.sound); } };
     api.current = type => {
+      if (type === 'launch' && places.every(p=>callbacks.current.visited.includes(p.id))) launchTime=performance.now();
       if (type.startsWith('move-')) {
         keys.clear(); target = null;
         const direction = type.slice(5);
@@ -284,6 +314,8 @@ export default function World(props: Props) {
       if (callbacks.current.paused) return;
       const rect = renderer.domElement.getBoundingClientRect();
       raycaster.setFromCamera(new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1, -(e.clientY-rect.top)/rect.height*2+1),camera);
+      if(callbacks.current.duck && raycaster.intersectObject(duck,true).length){callbacks.current.onDuck();return;}
+      if(callbacks.current.hunt){for(const group of bugMeshes){if(!callbacks.current.solved.includes(group.userData.bugId)&&raycaster.intersectObject(group,true).length){inspected=group.userData.bugId;callbacks.current.onBug(group.userData.bugId);return;}}}
       const point = new THREE.Vector3();
       if (raycaster.ray.intersectPlane(plane,point) && valid(point.x,point.z)) {
         target = point; targetMarker.position.set(point.x,0.25,point.z); targetMarker.visible = true;
@@ -307,6 +339,22 @@ export default function World(props: Props) {
       frame = requestAnimationFrame(animate);
       const dt = Math.min((now-previous)/1000,0.04); previous = now; elapsed += dt;
       const { night, paused, reducedMotion } = callbacks.current;
+      duck.visible=callbacks.current.duck;
+      if(!paused && duck.visible){
+        const distance=duck.position.distanceTo(new THREE.Vector3(player.position.x,.24,player.position.z));
+        if(distance>.85){const angle=Math.atan2(player.position.x-duck.position.x,player.position.z-duck.position.z);duck.rotation.y=angle;duck.position.x+=Math.sin(angle)*Math.min(distance-.85,dt*2.7);duck.position.z+=Math.cos(angle)*Math.min(distance-.85,dt*2.7);}
+        duck.position.y=.24+(!reducedMotion&&distance>.9?Math.abs(Math.sin(elapsed*12))*.045:0);
+      }
+      bugMeshes.forEach((group,i)=>{
+        const id=bugs[i].id;group.visible=callbacks.current.hunt&&!callbacks.current.solved.includes(id);
+        if(!group.visible)return;
+        if(!reducedMotion&&!paused)group.rotation.z=Math.sin(elapsed*4+i)*.08;
+        const distance=Math.hypot(player.position.x-group.position.x,player.position.z-group.position.z);
+        if(!paused&&distance<.6&&inspected!==id){inspected=id;callbacks.current.onBug(id);}
+        if(inspected===id&&distance>1)inspected=null;
+      });
+      launchPad.visible=places.every(p=>callbacks.current.visited.includes(p.id));
+      if(launchTime!==null){const flight=(now-launchTime)/1000;rocket.position.y=reducedMotion?0:Math.min(16,flight*flight*2);flame.visible=!reducedMotion&&flight<3;rocket.visible=reducedMotion||flight<3;}
       ambient.intensity = THREE.MathUtils.lerp(ambient.intensity,night ? 0.3 : 0.7,0.04);
       sun.intensity = THREE.MathUtils.lerp(sun.intensity,night ? 0.4 : 2.5,0.04);
       sky.intensity = THREE.MathUtils.lerp(sky.intensity,night ? 0.55 : 1.25,0.04);
@@ -341,7 +389,7 @@ export default function World(props: Props) {
         collectibles.forEach((gem,i)=>{
           if(!gem.visible)return;
           if(!reducedMotion) {gem.rotation.y=elapsed*1.6;gem.position.y=0.65+Math.sin(elapsed*2.5+i)*0.07;}
-          if(Math.hypot(player.position.x-gem.position.x,player.position.z-gem.position.z)<0.48){gem.visible=false;burst(gem.position);callbacks.current.onCollect(i);playSound('collect',callbacks.current.sound);}
+          if(Math.hypot(player.position.x-gem.position.x,player.position.z-gem.position.z)<0.48){gem.visible=false;if(!reducedMotion)burst(gem.position);callbacks.current.onCollect(i);playSound('collect',callbacks.current.sound);}
         });
       }
       if(!reducedMotion) {
@@ -367,6 +415,7 @@ export default function World(props: Props) {
     };
     frame=requestAnimationFrame(animate); setReady(true);
     return()=>{
+      callbacks.current.onCapture(null);
       cancelAnimationFrame(frame);observer.disconnect();window.removeEventListener('keydown',keydown);window.removeEventListener('keyup',keyup);window.removeEventListener('blur',blur);renderer.domElement.removeEventListener('pointerdown',pointerdown);renderer.domElement.removeEventListener('pointerup',pointerup);renderer.domElement.removeEventListener('pointercancel',pointercancel);
       scene.traverse(object=>{if(object instanceof THREE.Mesh){object.geometry.dispose();const list=Array.isArray(object.material)?object.material:[object.material];list.forEach(material=>{if(material.map)material.map.dispose();material.dispose();});}else if(object instanceof THREE.Line){object.geometry.dispose();(object.material as THREE.Material).dispose();}});
       renderer.dispose();renderer.domElement.remove();api.current=()=>{};

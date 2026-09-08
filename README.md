@@ -40,6 +40,25 @@ The original static-host workflow remains available: `npm run build:static` outp
 
 Discovery progress, sound and lighting preferences stay in local storage. Collected sparks last for the current page session. Returning to the crossroads does not erase discoveries. The site supports reduced motion, keyboard focus management, mobile layouts, and a fallback when WebGL is unavailable.
 
+## The scenic route
+
+Six optional extras are available without blocking the portfolio content:
+
+- **Quack, the rubber duck:** follows the visitor on the island. Tap the 3D duck or use “Talk to the duck” for jokes, discovery hints, and factual notes about Idris. The companion can be dismissed; its preference persists locally.
+- **Debugging quest:** start a hunt to reveal three little bugs. Walk near or tap a bug to inspect it, or use the case list for keyboard / Read mode / non-WebGL access. Correct decisions reveal the implementation and outcome; wrong answers can be retried. Resolved cases persist locally.
+- **Secret terminal:** press backtick outside a text field, or use the visible terminal card. `help` lists the supported commands. Arrow keys recall command history; Escape closes the panel. Commands use a fixed local dispatcher, never `eval`, a server shell, or external execution.
+- **Ship It finale:** discovering all five places unlocks the launchpad. Launch a tiny island rocket and watch the confetti settle into `idris.ng`. Reduced-motion visitors get an immediate completion state. The finale can be replayed; the shipped badge persists locally. This never triggers a real deployment.
+- **Explorer postcard:** capture the live island and current discoveries in a personalized 1200×800 PNG. Read mode and non-WebGL browsers use a code-drawn island. Names and images never leave the browser. The postcard is available before completing any quest.
+- **BytesBurn recording booth:** Idris's recorded welcome, studio lighting, opt-in playback, playback-linked waveform, and optional transcript. Playback stops when the panel unmounts or the tab is hidden. A playback error is displayed if the file cannot load.
+
+### The BytesBurn welcome
+
+The cleaned recording is served from `public/audio/bytesburn-welcome.mp3`, configured in `src/experienceContent.ts`. There is no autoplay or preloading. The original supplied MP3 is not changed or included in the public assets. See [the audio processing notes](docs/welcome-audio.md) for the cleanup recipe. The transcript remains unset until the recorded wording is confirmed; add the exact text to `welcomeRecording.transcript` to expose the transcript disclosure. Browser tests cover actual playback, pause, replay, stopping on panel close / simulated hidden tab, and file-load failure.
+
+`src/experienceContent.ts` also holds duck notes and bug cases. The three current cases describe actual implementation choices in this repository: tap-versus-swipe handling, retaining spark state across view changes, and a WebGL fallback. They are explicitly labelled portfolio field notes, not unverified career stories or client outcomes. Replace or extend them only with accurate stories supplied by Idris.
+
+`src/Adventures.tsx`, `src/Postcard.tsx`, and `src/RecordingBooth.tsx` implement the extras; `src/adventures.css` contains their desktop, mobile, and reduced-motion styles. The island additions remain procedural Three.js geometry.
+
 ## Content and customization
 
 `src/App.tsx` contains portfolio panels and interface copy. `src/content.ts` defines destinations and project URLs. `src/ProjectArcade.tsx` contains the two interactive product showcases; `src/PodcastRadio.tsx` contains the BytesBurn receiver. `src/World.tsx` builds and animates the island with code; no downloaded 3D models or image assets are needed. `src/styles.css` and `src/features.css` define the design and breakpoints.
