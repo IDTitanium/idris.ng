@@ -9,7 +9,21 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173. For production, run `npm run build` and serve `dist/` on any static host. `npm run preview` previews that production build locally.
+Use Node.js 22 (`nvm use` if you use nvm). Open http://localhost:5173 for the Vite development server. `npm run dev:cloud` runs the Next.js host at http://localhost:3000 instead.
+
+## Production / Laravel Cloud
+
+```sh
+npm ci --include=dev --no-audit
+npm run build
+npm start
+```
+
+The production host is Next.js, one of Laravel Cloud's supported JavaScript frameworks. It serves the existing React game without server-rendering its browser-only WebGL and storage code. `npm start` binds to `0.0.0.0` and respects the `PORT` environment variable (default `3000`). `/health` returns an uncached JSON health response. No PHP, database, cache, queue, or application secrets are required.
+
+See [the Laravel Cloud deployment guide](docs/laravel-cloud.md) for dashboard settings, domain setup, and verification. Building locally does not deploy the site.
+
+The original static-host workflow remains available: `npm run build:static` outputs `dist/`, `npm run preview` previews it, and `npm run start:static` serves it with the existing Express server. These are separate from the Cloud production commands.
 
 ## Explore
 
@@ -48,6 +62,7 @@ Idris confirmed that he is currently building SubSync and Clippy. No unverified 
 npx playwright install chromium
 npm test
 npm run build
+npm run test:production
 ```
 
 Browser tests cover spark collection, five-place discovery persistence (including progress from the original four-place world), reading mode, settings, dialog keyboard focus, project links and interactions, radio tuning, layouts from 320px through tablet widths, touch movement and hit targets, landscape drawers, reduced motion, and WebGL fallback.
